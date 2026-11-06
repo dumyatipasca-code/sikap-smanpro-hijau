@@ -1,0 +1,15 @@
+SIKAP SMANPRO - PAKET PWA
+=========================
+Langkah lengkap ada di PANDUAN_INSTALASI_SIKAP_SMANPRO.pdf.
+
+Ringkasnya:
+1. Deploy aplikasi Apps Script sebagai Web app, salin link berakhiran /exec.
+2. Unggah SEMUA berkas folder ini (tanpa subfolder) ke hosting https
+   (GitHub Pages, Netlify Drop, atau Cloudflare Pages). Tidak ada berkas yang perlu diedit.
+3. Buka alamat PWA di HP. Muncul kotak "Masukkan alamat aplikasi": tempel link /exec,
+   ketuk "Simpan dan buka". Cukup sekali per HP.
+   (Alternatif: isi link di config.js lalu unggah.)
+4. Pasang: Android (Chrome) tombol "Instal"; iPhone (Safari) Bagikan > Tambah ke Layar Utama.
+
+Mengganti alamat di HP: tambahkan ?atur=1 di ujung alamat PWA.
+Pembaruan aplikasi cukup "New version" di Apps Script; folder PWA tidak perlu diubah.

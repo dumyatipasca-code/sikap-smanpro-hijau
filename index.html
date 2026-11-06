@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIKAP SMANPRO</title>
+<meta name="theme-color" content="#054835">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SIKAP SMANPRO">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+html,body{margin:0;height:100%;background:#054835;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+.layar{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(175deg,#1dae57 0%,#087854 38%,#054835 100%);z-index:5;transition:opacity .4s;padding:20px;box-sizing:border-box}
+.layar.selesai{opacity:0;pointer-events:none}
+#muat img{width:min(60vw,260px);border-radius:28px;box-shadow:0 12px 40px #0008}
+.kartu{background:#fff;color:#0f2a1e;border-radius:16px;padding:22px 18px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 40px #0008;line-height:1.45}
+.kartu h2{margin:0 0 8px;color:#054835;font-size:19px}.kartu p{margin:6px 0;font-size:14px}
+.kartu button,.kartu a.tbl{display:inline-block;margin:10px 4px 0;background:#054835;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;text-decoration:none}
+.kartu a.tbl.out{background:#fff;color:#054835;border:1.5px solid #054835}
+#inst{position:fixed;z-index:9;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));background:#fbbf24;color:#241a00;border:0;border-radius:22px;padding:10px 16px;font-weight:700;box-shadow:0 4px 14px #0006;display:none}
+#ios{position:fixed;z-index:9;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));background:#fff;color:#0f2a1e;border-radius:14px;padding:14px;box-shadow:0 8px 30px #0006;display:none;font-size:14px;line-height:1.45}
+#ios button{float:right;border:0;background:#054835;color:#fff;border-radius:8px;padding:5px 12px;margin-left:8px}
+.hidden{display:none!important}
+.kartu input{width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #cfe3d6;border-radius:10px;font-size:14px;margin-top:6px}
+.err{color:#e03131;font-size:12.5px;min-height:17px;margin-top:5px}.kecil{font-size:12px!important;color:#587063}
+</style>
+</head>
+<body>
+<div id="muat" class="layar"><img src="icon-512.png" alt="SIKAP SMANPRO"></div>
+<div id="atur" class="layar hidden"><div class="kartu"><h2>Masukkan alamat aplikasi</h2><p>Tempel link yang berakhiran <b>/exec</b> dari Apps Script<br><small>(Deploy &gt; Manage deployments &gt; Web app URL)</small></p><input id="urlin" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="none" autocorrect="off" spellcheck="false"><div id="urlerr" class="err"></div><button id="urlok">Simpan dan buka</button><p class="kecil">Cukup sekali di perangkat ini. Alamat tersimpan di HP Anda.</p></div></div>
+<div id="gagal" class="layar hidden"><div class="kartu"><h2 id="gjudul">Aplikasi belum bisa dibuka</h2><p id="gisi">Periksa koneksi internet Anda.</p><button id="ulang">Coba lagi</button><button id="ubah" class="hidden">Ubah alamat</button><a class="tbl out" id="buka" target="_blank" rel="noopener">Buka di browser</a></div></div>
+<iframe id="app" title="SIKAP SMANPRO" allow="clipboard-write; fullscreen"></iframe>
+<button id="inst">Instal</button>
+<div id="ios"><button id="iosx">Tutup</button><b>Pasang di iPhone:</b> ketuk tombol <b>Bagikan</b> (kotak berpanah) di Safari, lalu pilih <b>Tambah ke Layar Utama</b>.</div>
+<script>
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  // Alamat aplikasi (link /exec Apps Script). Prioritas: config.js > alamat ini > alamat yang ditempel di HP.
+  var BAWAAN = 'https://script.google.com/macros/s/AKfycbw3cPNFkQvuCnMa_lXOrK_kP81Vm4whFa1Ong7oRSlP0BWYh4UP35vNfjqLSOBhLFGZBA/exec';
+  var f = $('app'), terbuka = false, batas = null, url = '', dariSimpan = false;
+
+  function sembunyi(id) { $(id).classList.add('hidden'); }
+  function tampil(id) { $(id).classList.remove('hidden'); }
+  function bacaLokal() { try { return localStorage.getItem('sikap_url') || ''; } catch (e) { return ''; } }
+  function simpanLokal(v) { try { localStorage.setItem('sikap_url', v); } catch (e) {} }
+  function hapusLokal() { try { localStorage.removeItem('sikap_url'); } catch (e) {} }
+  function bersih(u) { return String(u == null ? '' : u).trim().replace(/^["']+|["']+$/g, ''); }
+  function valid(u) { return /^https:\/\/\S+\/exec$/.test(u); }
+
+  function siap() { terbuka = true; clearTimeout(batas); $('muat').classList.add('selesai'); sembunyi('gagal'); }
+  function gagal(judul, isi) { clearTimeout(batas); $('muat').classList.add('selesai'); $('gjudul').textContent = judul; $('gisi').textContent = isi; tampil('gagal'); }
+  function muat() {
+    sembunyi('gagal'); terbuka = false; $('muat').classList.remove('selesai');
+    if (navigator.onLine === false) { gagal('Tidak ada koneksi internet', 'SIKAP SMANPRO memerlukan internet. Nyalakan data seluler atau Wi-Fi, lalu coba lagi.'); return; }
+    f.src = url;
+    clearTimeout(batas);
+    batas = setTimeout(function () { if (!terbuka) gagal('Aplikasi lambat dibuka', 'Koneksi mungkin lemah. Coba lagi, atau buka langsung lewat browser.'); }, 20000);
+  }
+  function tampilAtur(isi) {
+    $('muat').classList.add('selesai'); sembunyi('gagal'); f.classList.add('hidden');
+    $('urlin').value = isi || ''; $('urlerr').textContent = ''; tampil('atur');
+  }
+  function jalan(u, lokal) {
+    url = u; dariSimpan = !!lokal; sembunyi('atur'); f.classList.remove('hidden');
+    $('buka').href = u; f.onload = siap; $('ulang').onclick = muat;
+    if (dariSimpan) tampil('ubah'); else sembunyi('ubah');
+    window.addEventListener('online', function () { if (!terbuka && url) muat(); });
+    muat();
+  }
+  $('urlok').onclick = function () {
+    var v = bersih($('urlin').value);
+    if (!valid(v)) { $('urlerr').textContent = 'Link harus diawali https:// dan diakhiri /exec. Salin ulang dari Apps Script.'; return; }
+    simpanLokal(v); jalan(v, true);
+  };
+  $('ubah').onclick = function () { var lama = url; hapusLokal(); sembunyi('gagal'); terbuka = true; tampilAtur(lama); };
+
+  function boot() {
+    var cfg = bersih(window.SIKAP_URL), simpan = bacaLokal(), paksa = /[?&]atur(=|&|$)/.test((window.location && window.location.search) || '');
+    if (valid(cfg)) jalan(cfg, false);                 // alamat di config.js menang bila terisi
+    else if (!paksa && valid(BAWAAN)) jalan(BAWAAN, false); // alamat bawaan di dalam index.html
+    else if (!paksa && valid(simpan)) jalan(simpan, true); // jika tidak, pakai alamat yang ditempel di halaman ini
+    else tampilAtur(simpan);
+  }
+  var sc = document.createElement('script'); sc.src = 'config.js?t=' + Date.now(); sc.onload = boot; sc.onerror = boot; document.head.appendChild(sc);
+
+  /* ---- tombol Instal: hanya tampil bila belum terpasang ---- */
+  function terpasang() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+  var tunda = null, b = $('inst'), ios = $('ios');
+  if (!terpasang()) {
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); tunda = e; b.style.display = 'block'; });
+    b.onclick = function () { if (!tunda) return; tunda.prompt(); tunda.userChoice.then(function () { tunda = null; b.style.display = 'none'; }); };
+    var iphone = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    if (iphone) { ios.style.display = 'block'; $('iosx').onclick = function () { ios.style.display = 'none'; }; }
+  }
+  window.addEventListener('appinstalled', function () { b.style.display = 'none'; ios.style.display = 'none'; tunda = null; });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+})();
+</script>
+</body>
+</html>
